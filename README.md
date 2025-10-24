@@ -38,60 +38,47 @@ sudo mv upload.sh /usr/local/bin/upload
 
 ## Usage
 
-Basic upload:
+### Basic upload:
 
 upload -f path/to/file.png
 
-Upload with authentication:
+### Upload with authentication:
 
 upload -f file.png -u user:password
 
-Upload and copy URL to clipboard:
+### Upload and copy URL to clipboard:
 
 upload -f file.png -c
 
-Specify a custom upload URL:
+### Specify a custom upload URL:
 
 upload -f file.png -U https://upload.example.com
 
-Add custom headers and form fields:
+### Add custom headers and form fields:
 
 upload -f file.png -H "X-API-Key: key" -F "extra=field"
 
-### Viewing History:
+## Viewing History:
 
-Recent Uploads (Outputs all uploads (oldest → newest) with timestamp, filename, and URL)
+### Recent Uploads (Outputs all uploads (oldest → newest) with timestamp, filename, and URL)
 
 upload -r
 
-Check all uploads (active first, then expired):
+### Check all uploads (active first, then expired):
 
 upload -C
 
-Check only active uploads:
+### Check only active uploads:
 
 upload -C -a
 
-Check only expired uploads:
+### Check only expired uploads:
 
 upload -C -e
 
-## History is saved in this file (can be changed in script):
+### History is saved in this file (can be changed in script):
 
 ~/.uploaded_files.txt
-
-## Colors
-
-    Green: Successful uploads
-
-    Orange: URL copied to clipboard
-
-    Red: Expired uploads
-
-Disable color output:
-
-upload -f file.png --no-color
-
 
 Each line format:
 
@@ -102,6 +89,18 @@ YYYY-MM-DD HH:MM:SS | filename | URL
     --recent shows chronological uploads.
 
     --check verifies if URLs are still active.
+
+## Colors
+
+    Green: Successful uploads
+
+    Orange: URL copied to clipboard
+
+    Red: Expired uploads
+
+### Disable color output:
+
+upload -f file.png --no-color
 
 ## Requirements
 
@@ -119,5 +118,5 @@ YYYY-MM-DD HH:MM:SS | filename | URL
 
 MIT License
 
-Author
+### Author
 Created by psychhim – https://github.com/psychhim/command_upload
