@@ -25,15 +25,14 @@
 
 1. Clone this repository or download `upload.sh`:
 
-```bash
 git clone https://github.com/yourusername/upload.sh.git
 cd upload.sh
 
-    Make the script executable:
+2. Make the script executable:
 
 chmod +x upload.sh
 
-    Optionally, move it to a directory in your PATH for global access:
+3. Optionally, move it to a directory in your PATH for global access:
 
 sudo mv upload.sh /usr/local/bin/upload
 
@@ -59,13 +58,11 @@ Add custom headers and form fields:
 
 upload -f file.png -H "X-API-Key: key" -F "extra=field"
 
-Viewing History
-Recent Uploads (chronological)
+### Viewing History:
+
+Recent Uploads (Outputs all uploads (oldest → newest) with timestamp, filename, and URL)
 
 upload -r
-
-Outputs all uploads (oldest → newest) with timestamp, filename, and URL.
-Check Upload Status
 
 Check all uploads (active first, then expired):
 
@@ -79,7 +76,11 @@ Check only expired uploads:
 
 upload -C -e
 
-Colors
+## History is saved in this file (can be changed in script):
+
+~/.uploaded_files.txt
+
+## Colors
 
     Green: Successful uploads
 
@@ -91,11 +92,6 @@ Disable color output:
 
 upload -f file.png --no-color
 
-Hidden History File
-
-The script keeps a hidden file:
-
-~/.uploaded_files.txt
 
 Each line format:
 
@@ -107,7 +103,7 @@ YYYY-MM-DD HH:MM:SS | filename | URL
 
     --check verifies if URLs are still active.
 
-Requirements
+## Requirements
 
     Bash 4+
 
@@ -119,20 +115,9 @@ Requirements
 
         macOS: pbcopy
 
-License
+## License
 
 MIT License
 
-Example
-
-# Upload a file with authentication, copy URL to clipboard
-upload -f screenshot.png -u user:pass -c
-
-# Show recent uploads
-upload -r
-
-# Check active uploads only
-upload -C -a
-
 Author
-Created by Your Name – GitHub Profile
+Created by psychhim – https://github.com/psychhim/command_upload
