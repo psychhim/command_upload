@@ -47,16 +47,14 @@ set_colors() {
 }
 
 # HISTORY
-url_encode() {
-  local url="$1"
-  # Encode special characters in URL, except safe ones
-  python3 -c "import urllib.parse; print(urllib.parse.quote('''$url''', safe=':/?&=#'))"
-}
-
 check_url_alive() {
   local url="$1"
-  local encoded
-  encoded=$(url_encode "$url")
+  # Encode only spaces, brackets, and parentheses; leave existing % encodings as they are
+  local encoded="${url// /%20}"
+  encoded="${encoded//[/\%5B}"
+  encoded="${encoded//]/%5D}"
+  encoded="${encoded//\(/%28}"
+  encoded="${encoded//\)/%29}"
   local status
   status=$(curl -s -o /dev/null -w "%{http_code}" -L "$encoded")
   [[ "$status" == "200" ]]
