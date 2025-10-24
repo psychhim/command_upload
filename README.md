@@ -25,7 +25,7 @@
 
 1. Clone this repository or download `upload.sh`:
 
-git clone https://github.com/yourusername/upload.sh.git
+git clone https://github.com/psychhim/command_upload.git
 cd upload.sh
 
 2. Make the script executable:
