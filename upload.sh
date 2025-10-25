@@ -7,6 +7,7 @@ UPLOAD_URL="https://upload.freedoms4.top"
 HISTORY_FILE="$HOME/.uploaded_files.txt"
 COPY_TO_CLIPBOARD=false
 USE_COLOR=true
+MAX_JOBS=10
 
 # FUNCTIONS
 print_usage() {
@@ -46,50 +47,26 @@ set_colors() {
   fi
 }
 
-# HISTORY
-check_url_alive() {
-  local url="$1"
-  # Encode only spaces, brackets, and parentheses; leave existing % encodings as they are
-  local encoded="${url// /%20}"
-  encoded="${encoded//[/\%5B}"
-  encoded="${encoded//]/%5D}"
-  encoded="${encoded//\(/%28}"
-  encoded="${encoded//\)/%29}"
-  local status
-  status=$(curl -s -o /dev/null -w "%{http_code}" -L "$encoded")
-  [[ "$status" == "200" ]]
-}
+# ASYNC URL CHECK with bracket/space/parenthesis encoding
+check_url() {
+  local timestamp="$1"
+  local filename="$2"
+  local url="$3"
 
-show_active() {
-  [[ ! -f "$HISTORY_FILE" ]] && { echo "No history found."; return; }
-  echo -e "${BOLD}Active uploads:${RESET}"
-  while IFS='|' read -r timestamp filename url; do
-    url="$(echo "$url" | xargs)"
-    if check_url_alive "$url"; then
-      echo -e "${GREEN}${timestamp} | ${filename} | ${url}${RESET}"
-    fi
-  done < "$HISTORY_FILE"
-}
+  # Encode spaces, brackets, parentheses
+  url="${url// /%20}"
+  url="${url//[/\%5B}"
+  url="${url//]/%5D}"
+  url="${url//\(/%28}"
+  url="${url//\)/%29}"
 
-show_expired() {
-  [[ ! -f "$HISTORY_FILE" ]] && { echo "No history found."; return; }
-  echo -e "${BOLD}Expired uploads:${RESET}"
-  while IFS='|' read -r timestamp filename url; do
-    url="$(echo "$url" | xargs)"
-    if ! check_url_alive "$url"; then
-      echo -e "${RED}${timestamp} | ${filename} | ${url}${RESET}"
-    fi
-  done < "$HISTORY_FILE"
+  status=$(curl -s -o /dev/null -w "%{http_code}" -L "$url" || echo 0)
+  if [[ "$status" == "200" ]]; then
+    echo "ACTIVE|$timestamp|$filename|$url"
+  else
+    echo "EXPIRED|$timestamp|$filename|$url"
+  fi
 }
-
-show_all() {
-  show_active
-  echo
-  show_expired
-}
-
-show_active_only() { show_active; }
-show_expired_only() { show_expired; }
 
 show_recent() {
   [[ ! -f "$HISTORY_FILE" ]] && { echo "No history found."; return; }
@@ -97,7 +74,70 @@ show_recent() {
   cat "$HISTORY_FILE"
 }
 
-# ARG
+show_async() {
+  [[ ! -f "$HISTORY_FILE" ]] && { echo "No history found."; return; }
+
+  active_urls=()
+  expired_urls=()
+  pids=()
+  tmp_output=$(mktemp)
+  trap 'rm -f "$tmp_output"' EXIT
+
+  while IFS= read -r line; do
+    timestamp=$(echo "$line" | cut -d'|' -f1 | xargs)
+    filename=$(echo "$line" | cut -d'|' -f2 | xargs)
+    url=$(echo "$line" | cut -d'|' -f3 | xargs)
+
+    {
+      check_url "$timestamp" "$filename" "$url"
+    } >> "$tmp_output" &
+
+    pids+=($!)
+    while (( ${#pids[@]} >= MAX_JOBS )); do
+      for i in "${!pids[@]}"; do
+        if ! kill -0 "${pids[i]}" 2>/dev/null; then
+          wait "${pids[i]}"
+          unset 'pids[i]'
+        fi
+      done
+      sleep 0.05
+    done
+  done < "$HISTORY_FILE"
+
+  wait
+
+  # Read tmp_output and separate
+  while IFS= read -r line; do
+    status=$(echo "$line" | cut -d'|' -f1)
+    content=$(echo "$line" | cut -d'|' -f2-)
+    if [[ "$status" == "ACTIVE" ]]; then
+      active_urls+=("$content")
+    else
+      expired_urls+=("$content")
+    fi
+  done < "$tmp_output"
+
+  # Sort arrays by timestamp (first field)
+  IFS=$'\n' active_urls=($(printf "%s\n" "${active_urls[@]}" | sort))
+  IFS=$'\n' expired_urls=($(printf "%s\n" "${expired_urls[@]}" | sort))
+
+  # Print in groups with colors
+  if [[ "$CHECK_ACTIVE" == true ]] || [[ "$CHECK_ACTIVE" == false && "$CHECK_EXPIRED" == false ]]; then
+    echo -e "${BOLD}Active uploads:${RESET}"
+    for line in "${active_urls[@]}"; do
+      echo -e "${GREEN}${line}${RESET}"
+    done
+  fi
+
+  if [[ "$CHECK_EXPIRED" == true ]] || [[ "$CHECK_ACTIVE" == false && "$CHECK_EXPIRED" == false ]]; then
+    echo -e "${BOLD}Expired uploads:${RESET}"
+    for line in "${expired_urls[@]}"; do
+      echo -e "${RED}${line}${RESET}"
+    done
+  fi
+}
+
+# ARGUMENTS
 USER_AUTH=""
 declare -a HEADERS
 declare -a FIELDS
@@ -134,22 +174,14 @@ done
 
 set_colors
 
-# RECENT/CHECK FLAGS
+# RECENT / CHECK FLAGS
 if $SHOW_RECENT; then
   show_recent
   exit 0
 fi
 
 if $CHECK; then
-  if $CHECK_ACTIVE && $CHECK_EXPIRED; then
-    show_all
-  elif $CHECK_ACTIVE; then
-    show_active_only
-  elif $CHECK_EXPIRED; then
-    show_expired_only
-  else
-    show_all
-  fi
+  show_async
   exit 0
 fi
 
