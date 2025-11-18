@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-UPLOAD_URL="https://upload.freedoms4.top"
+UPLOAD_URL="https://user:pass@upload.freedoms4.top/index.php"
 HISTORY_FILE="$HOME/.uploaded_files.txt"
 COPY_TO_CLIPBOARD=false
 USE_COLOR=true
@@ -25,6 +25,7 @@ Options:
   -C, --check               Check uploads status (active/expired)
   -a, --active              Show only active uploads (use with --check)
   -e, --expired             Show only expired uploads (use with --check)
+  -d, --delete URL          Delete uploaded file by URL
   --no-color                Disable colored output
   -h, --help                Show this help
 USAGE
@@ -146,6 +147,7 @@ SHOW_RECENT=false
 CHECK=false
 CHECK_ACTIVE=false
 CHECK_EXPIRED=false
+DELETE_URL=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -159,6 +161,7 @@ while [[ $# -gt 0 ]]; do
     -C|--check) CHECK=true; shift ;;
     -a|--active) CHECK_ACTIVE=true; shift ;;
     -e|--expired) CHECK_EXPIRED=true; shift ;;
+    -d|--delete) DELETE_URL="$2"; shift 2 ;;
     --no-color) USE_COLOR=false; shift ;;
     -h|--help) print_usage; exit 0 ;;
     --) shift; break ;;
@@ -183,6 +186,24 @@ fi
 if $CHECK; then
   show_async
   exit 0
+fi
+
+# DELETE MODE
+if [[ -n "$DELETE_URL" ]]; then
+  file_to_delete="$(basename "$DELETE_URL")"
+  echo -e "${ORANGE}Deleting: $DELETE_URL${RESET}" >&2
+
+  # Send POST request with "delete" field (assumes PHP server expects POST)
+  delete_response=$(curl -s -u "$USER_AUTH" -F "delete=$file_to_delete" "$UPLOAD_URL" || true)
+
+  if [[ "$delete_response" == *"Deleted successfully"* ]]; then
+    echo -e "${GREEN}Deleted successfully.${RESET}"
+    exit 0
+  else
+    echo -e "${RED}Delete failed.${RESET}"
+    echo "Server response: $delete_response"
+    exit 5
+  fi
 fi
 
 # VALIDATION OF FILE
