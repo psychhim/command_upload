@@ -193,8 +193,14 @@ if [[ -n "$DELETE_URL" ]]; then
   file_to_delete="$(basename "$DELETE_URL")"
   echo -e "${ORANGE}Deleting: $DELETE_URL${RESET}" >&2
 
-  # Send POST request with "delete" field (assumes PHP server expects POST)
-  delete_response=$(curl -s -u "$USER_AUTH" -F "delete=$file_to_delete" "$UPLOAD_URL" || true)
+  if [[ "$UPLOAD_URL" =~ ^https?://([^/@]+)@ ]]; then
+    USER_AUTH="${BASH_REMATCH[1]}"
+    UPLOAD_URL_CLEAN="${UPLOAD_URL/\/\/$USER_AUTH@/\/\/}"
+  else
+    UPLOAD_URL_CLEAN="$UPLOAD_URL"
+  fi
+
+  delete_response=$(curl -s -F "delete=$file_to_delete" "$UPLOAD_URL_CLEAN" ${USER_AUTH:+-u "$USER_AUTH"} || true)
 
   if [[ "$delete_response" == *"Deleted successfully"* ]]; then
     echo -e "${GREEN}Deleted successfully.${RESET}"
