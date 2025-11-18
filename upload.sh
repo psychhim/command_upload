@@ -237,7 +237,10 @@ if [[ -n "$link" ]]; then
 
   # CLIPBOARD
   if $COPY_TO_CLIPBOARD; then
-    if command -v xclip >/dev/null 2>&1; then
+    if command -v wl-copy >/dev/null 2>&1; then
+      echo -n "$link" | wl-copy --type text/plain
+      >&2 echo -e "${ORANGE}Link copied to clipboard.${RESET}"
+    elif command -v xclip >/dev/null 2>&1; then
       echo -n "$link" | xclip -selection clipboard
       >&2 echo -e "${ORANGE}Link copied to clipboard.${RESET}"
     elif command -v pbcopy >/dev/null 2>&1; then
