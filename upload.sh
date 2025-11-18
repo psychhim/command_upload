@@ -25,7 +25,7 @@ Options:
   -C, --check               Check uploads status (active/expired)
   -a, --active              Show only active uploads (use with --check)
   -e, --expired             Show only expired uploads (use with --check)
-  -d, --delete 				Delete uploaded file by URL or uploaded file name
+  -d, --delete 	            Delete uploaded file by URL or uploaded file name
   --no-color                Disable colored output
   -h, --help                Show this help
 USAGE
