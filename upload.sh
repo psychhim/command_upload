@@ -8,6 +8,8 @@ HISTORY_FILE="$HOME/.uploaded_files.txt"
 COPY_TO_CLIPBOARD=false
 USE_COLOR=true
 MAX_JOBS=10
+TAKE_SCREENSHOT=false
+FULL_SCREENSHOT=false
 
 # FUNCTIONS
 print_usage() {
@@ -25,7 +27,12 @@ Options:
   -C, --check               Check uploads status (active/expired)
   -a, --active              Show only active uploads (use with --check)
   -e, --expired             Show only expired uploads (use with --check)
-  -d, --delete 	            Delete uploaded file by URL or uploaded file name
+  -d, --delete              Delete uploaded file by URL or uploaded file name
+
+  ### SCREENSHOT
+  -s, --screenshot          Take a screenshot (grim + slurp) and upload it
+                   --full   With --screenshot: Takes a FULL screenshot (no slurp)
+
   --no-color                Disable colored output
   -h, --help                Show this help
 USAGE
@@ -162,6 +169,8 @@ while [[ $# -gt 0 ]]; do
     -a|--active) CHECK_ACTIVE=true; shift ;;
     -e|--expired) CHECK_EXPIRED=true; shift ;;
     -d|--delete) DELETE_URL="$2"; shift 2 ;;
+    -s|--screenshot) TAKE_SCREENSHOT=true; shift ;;
+    --full) FULL_SCREENSHOT=true; shift ;;
     --no-color) USE_COLOR=false; shift ;;
     -h|--help) print_usage; exit 0 ;;
     --) shift; break ;;
@@ -210,6 +219,39 @@ if [[ -n "$DELETE_URL" ]]; then
     echo "Server response: $delete_response"
     exit 5
   fi
+fi
+
+# SCREENSHOT
+if $TAKE_SCREENSHOT; then
+  if ! command -v grim >/dev/null 2>&1; then
+    echo "Error: grim is required for --screenshot." >&2
+    exit 1
+  fi
+  if ! $FULL_SCREENSHOT && ! command -v slurp >/dev/null 2>&1; then
+    echo "Error: slurp is required unless using --full." >&2
+    exit 1
+  fi
+
+  ts="$(date '+%Y-%m-%d %H-%M-%S')"
+  screenshot_name="Screenshot From ${ts}.png"
+  screenshot_path="/tmp/$screenshot_name"
+
+  if $FULL_SCREENSHOT; then
+    echo "Taking FULL screenshot in 2 seconds..."
+	sleep 2
+    grim "$screenshot_path"
+  else
+    echo "Select area for screenshot..."
+    grim -g "$(slurp)" "$screenshot_path"
+  fi
+
+  if [[ ! -f "$screenshot_path" ]]; then
+    echo "Error: screenshot failed." >&2
+    exit 1
+  fi
+
+  FILE="$screenshot_path"
+  echo "Screenshot saved to: $FILE"
 fi
 
 # VALIDATION OF FILE
