@@ -27,7 +27,7 @@ Options:
   -C, --check               Check uploads status (active/expired)
   -a, --active              Show only active uploads (use with --check)
   -e, --expired             Show only expired uploads (use with --check)
-  -d, --delete              Delete uploaded file by URL or uploaded file name
+  -d, --delete              Delete uploaded file(s) by URL or filename
 
   ### SCREENSHOT
   -s, --screenshot          Take a screenshot (grim + slurp) and upload it
@@ -154,7 +154,7 @@ SHOW_RECENT=false
 CHECK=false
 CHECK_ACTIVE=false
 CHECK_EXPIRED=false
-DELETE_URL=""
+DELETE_URLS=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -168,7 +168,13 @@ while [[ $# -gt 0 ]]; do
     -C|--check) CHECK=true; shift ;;
     -a|--active) CHECK_ACTIVE=true; shift ;;
     -e|--expired) CHECK_EXPIRED=true; shift ;;
-    -d|--delete) DELETE_URL="$2"; shift 2 ;;
+    -d|--delete)
+      shift
+      while [[ $# -gt 0 && ! "$1" =~ ^- ]]; do
+        DELETE_URLS+=("$1")
+        shift
+      done
+      ;;
     -s|--screenshot) TAKE_SCREENSHOT=true; shift ;;
     --full) FULL_SCREENSHOT=true; shift ;;
     --no-color) USE_COLOR=false; shift ;;
@@ -197,28 +203,92 @@ if $CHECK; then
   exit 0
 fi
 
-# DELETE MODE
-if [[ -n "$DELETE_URL" ]]; then
-  file_to_delete="$(basename "$DELETE_URL")"
-  echo -e "${ORANGE}Deleting: $DELETE_URL${RESET}" >&2
+# DELETE
+if (( ${#DELETE_URLS[@]} > 0 )); then
+  echo -n "Deleting:"
+  for d in "${DELETE_URLS[@]}"; do
+    echo -n " $(basename "$d")"
+  done
+  echo
+  echo
 
-  if [[ "$UPLOAD_URL" =~ ^https?://([^/@]+)@ ]]; then
-    USER_AUTH="${BASH_REMATCH[1]}"
-    UPLOAD_URL_CLEAN="${UPLOAD_URL/\/\/$USER_AUTH@/\/\/}"
+  pids=()
+  tmp_output=$(mktemp)
+  trap 'rm -f "$tmp_output"' EXIT
+
+  for del in "${DELETE_URLS[@]}"; do
+    (
+      file_to_delete="$(basename "$del")"
+
+      if [[ "$UPLOAD_URL" =~ ^https?://([^/@]+)@ ]]; then
+        USER_AUTH="${BASH_REMATCH[1]}"
+        UPLOAD_URL_CLEAN="${UPLOAD_URL/\/\/$USER_AUTH@/\/\/}"
+      else
+        UPLOAD_URL_CLEAN="$UPLOAD_URL"
+      fi
+
+      delete_response=$(curl -s -F "delete=$file_to_delete" "$UPLOAD_URL_CLEAN" ${USER_AUTH:+-u "$USER_AUTH"} || true)
+
+      if [[ "$delete_response" == *"Deleted successfully"* ]]; then
+        echo "OK|$file_to_delete" >> "$tmp_output"
+      else
+        echo "FAIL|$file_to_delete|$delete_response" >> "$tmp_output"
+      fi
+    ) &
+
+    pids+=($!)
+
+    # Limit of concurrency
+    while (( ${#pids[@]} >= MAX_JOBS )); do
+      for i in "${!pids[@]}"; do
+        if ! kill -0 "${pids[i]}" 2>/dev/null; then
+          unset 'pids[i]'
+        fi
+      done
+      sleep 0.05
+    done
+  done
+
+  wait
+
+  successful=()
+  failed=()
+
+  while IFS= read -r line; do
+    status=$(echo "$line" | cut -d'|' -f1)
+    file=$(echo "$line" | cut -d'|' -f2)
+    rest=$(echo "$line" | cut -d'|' -f3-)
+
+    if [[ $status == "OK" ]]; then
+      successful+=("$file")
+    else
+      failed+=("$file|$rest")
+    fi
+  done < "$tmp_output"
+
+  echo -e "${GREEN}Successful deletions:${RESET}"
+  if (( ${#successful[@]} > 0 )); then
+    for f in "${successful[@]}"; do
+      echo "  $f"
+    done
   else
-    UPLOAD_URL_CLEAN="$UPLOAD_URL"
+    echo "  (none)"
   fi
 
-  delete_response=$(curl -s -F "delete=$file_to_delete" "$UPLOAD_URL_CLEAN" ${USER_AUTH:+-u "$USER_AUTH"} || true)
-
-  if [[ "$delete_response" == *"Deleted successfully"* ]]; then
-    echo -e "${GREEN}Deleted successfully.${RESET}"
-    exit 0
+  echo
+  echo -e "${RED}Unsuccessful deletions:${RESET}"
+  if (( ${#failed[@]} > 0 )); then
+    for f in "${failed[@]}"; do
+      fname=${f%%|*}
+      msg=${f#*|}
+      echo "  $fname"
+      echo "    Server: $msg"
+    done
   else
-    echo -e "${RED}Delete failed.${RESET}"
-    echo "Server response: $delete_response"
-    exit 5
+    echo "  (none)"
   fi
+
+  exit 0
 fi
 
 # SCREENSHOT
@@ -238,7 +308,7 @@ if $TAKE_SCREENSHOT; then
 
   if $FULL_SCREENSHOT; then
     echo "Taking FULL screenshot in 2 seconds..."
-	sleep 2
+    sleep 2
     grim "$screenshot_path"
   else
     echo "Select area for screenshot..."
