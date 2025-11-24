@@ -126,6 +126,10 @@ upload -f file.png --no-color
 
         macOS: pbcopy
 
+    Optional for Screenshot uploading:
+
+        grim, slurp
+
 ## License
 
 MIT License - https://mit-license.org/ 
