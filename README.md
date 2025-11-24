@@ -1,6 +1,6 @@
 # Upload.sh – Command-Line File Uploader with History & Status
 
-**Upload.sh** is a versatile Bash program to upload files to a server via HTTP POST, track uploaded files, and manage their status, delete a file from server if the server supports it. It supports authentication, additional headers and form fields, clipboard copying, colored output, and maintains a hidden history of uploads with active/expired status checks.
+**Upload.sh** is a versatile Bash program to upload files to a server via HTTP POST, track uploaded files, and manage their status, delete a file from server if the server supports it. It supports additional headers and form fields, clipboard copying, colored output, and maintains a history of uploads with active/expired status checks.
 
 ---
 
@@ -10,8 +10,9 @@
 - Supports **HTTP Basic Authentication**.
 - Add custom **headers** and **form fields**.
 - **Copy URL to clipboard** automatically (`-c` / `--clipboard`).
-- Maintains a **hidden history** of uploads (`~/.uploaded_files.txt`), keeping the last 100 entries.
-- Check whether uploads are **active or expired**.
+- Take screenshot and directly upload it.
+- Maintains a history of uploads (`~/.uploaded_files.txt`), keeping the last 100 entries.
+- Check whether uploads are active or expired.
 - View all uploads in chronological order.
 - Colorful output for better readability:
   - **Green**: Upload successful  
@@ -58,11 +59,16 @@ upload -f file.png -U https://upload.example.com
 
 upload -f file.png -H "X-API-Key: key" -F "extra=field"
 
-### Delete an uploaded file:
+### Take screenshot and upload:
 
-upload -d file.png
+upload -s/--screenshot
+or for a full-screen screenshot, upload -s --full
+
+### Delete uploaded file(s):
+
+upload -d file.png file2.pdf
 or
-upload -d https://example.com/file.png
+upload -d https://example.com/file.png file2.pdf
 
 ## Viewing History:
 
