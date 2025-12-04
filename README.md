@@ -135,4 +135,4 @@ upload -f file.png --no-color
 MIT License - https://mit-license.org/ 
 
 ### Author
-Created by psychhim – https://github.com/psychhim/command_upload
+Created by psychhim – https://github.com/hexZoN3/command_upload
