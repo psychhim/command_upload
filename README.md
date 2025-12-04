@@ -1,4 +1,4 @@
-# Upload.sh – Command-Line File Uploader
+# Upload.sh – A command-line file uploader
 
 **Upload.sh** is a versatile Bash program to upload files to a server via HTTP POST, track uploaded files, and manage their status, delete a file from server if the server supports it. It supports additional headers and form fields, clipboard copying, colored output, and maintains a history of uploads with active/expired status checks.
 
