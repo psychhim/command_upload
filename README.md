@@ -66,7 +66,8 @@ upload -s/--screenshot
 or for a full-screen screenshot, upload -s --full
 
 ### Pastebin:
-cat log.txt | upload -p or echo "Hello World" | upload -p -c 
+cat log.txt | upload -p\
+echo "Hello World" | upload -p -c 
 
 ### Delete uploaded file(s):
 
