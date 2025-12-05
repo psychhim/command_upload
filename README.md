@@ -62,8 +62,8 @@ upload -f file.png -H "X-API-Key: key" -F "extra=field"
 
 ### Take screenshot and upload:
 
-upload -s/--screenshot
-or for a full-screen screenshot, upload -s --full
+upload -s/--screenshot\
+for a full-screen screenshot, upload -s --full
 
 ### Pastebin:
 cat log.txt | upload -p\
@@ -71,8 +71,7 @@ echo "Hello World" | upload -p -c
 
 ### Delete uploaded file(s):
 
-upload -d file.png file2.pdf
-or
+upload -d file.png file2.pdf\
 upload -d https://example.com/file.png file2.pdf
 
 ## Viewing History:
