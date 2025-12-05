@@ -11,7 +11,7 @@
 - Add custom **headers** and **form fields**.
 - **Copy URL to clipboard** automatically (`-c` / `--clipboard`).
 - Take screenshot and directly upload it.
-- Can be used any service as a PASTEBIN.
+- Turns any upload service into a PASTEBIN.
 - Maintains a history of uploads (`~/.uploaded_files.txt`), keeping the last 100 entries.
 - Check whether uploads are active or expired.
 - View all uploads in chronological order.
