@@ -10,14 +10,17 @@ USE_COLOR=true
 MAX_JOBS=10
 TAKE_SCREENSHOT=false
 FULL_SCREENSHOT=false
+PASTEBIN_MODE=false
 
 # FUNCTIONS
 print_usage() {
   cat <<USAGE
 Usage: $0 [options] -f <file>
+       <command> | $0 [options] -p
 
 Options:
   -f, --file PATH           File to upload
+  -p, --pastebin            Read from stdin and upload as text file
   -u, --user USER:PASS      HTTP Basic auth (curl --user)
   -H, --header "K: V"       Additional header
   -F, --field name=value    Additional form field
@@ -35,6 +38,11 @@ Options:
 
   --no-color                Disable colored output
   -h, --help                Show this help
+
+Examples:
+  # To upload: $0 -u user:pass -f file.png -c 
+  # Pastebin: cat log.txt | $0 -p
+              echo "Hello World" | $0 -p -c 
 USAGE
 }
 
@@ -55,7 +63,16 @@ set_colors() {
   fi
 }
 
-# ASYNC URL CHECK with bracket/space/parenthesis encoding
+# GENERATE RANDOM FILENAME
+generate_random_name() {
+  # Use a subshell to avoid pipefail issues
+  (
+    set +o pipefail
+    tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 12
+  )
+}
+
+# ASYNC URL CHECK
 check_url() {
   local timestamp="$1"
   local filename="$2"
@@ -159,6 +176,7 @@ DELETE_URLS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -f|--file) FILE="$2"; shift 2 ;;
+    -p|--pastebin) PASTEBIN_MODE=true; shift ;;
     -u|--user) USER_AUTH="$2"; shift 2 ;;
     -H|--header) HEADERS+=("$2"); shift 2 ;;
     -F|--field) FIELDS+=("$2"); shift 2 ;;
@@ -291,6 +309,36 @@ if (( ${#DELETE_URLS[@]} > 0 )); then
   exit 0
 fi
 
+# PASTEBIN
+if $PASTEBIN_MODE; then
+  # Check if input is being piped
+  if [[ -t 0 ]]; then
+    >&2 echo "Error: --pastebin requires piped input."
+    >&2 echo "Usage: <command> | $0 -p"
+    >&2 echo "Example: echo 'hello' | $0 -p"
+    exit 1
+  fi
+  
+  random_name="$(generate_random_name)"
+  temp_file="/tmp/${random_name}.txt"
+  
+  # Ensure cleanup on exit
+  trap 'rm -f "$temp_file"' EXIT
+  
+  # Read all stdin into the temp file
+  cat > "$temp_file" || {
+    >&2 echo "Error: failed to read stdin."
+    exit 1
+  }
+  
+  if [[ ! -s "$temp_file" ]]; then
+    >&2 echo "Error: no input received."
+    exit 1
+  fi
+  
+  FILE="$temp_file"
+fi
+
 # SCREENSHOT
 if $TAKE_SCREENSHOT; then
   if ! command -v grim >/dev/null 2>&1; then
@@ -326,6 +374,13 @@ fi
 
 # VALIDATION OF FILE
 if [[ -z "$FILE" ]]; then
+  # Check if stdin is being piped
+  if [[ ! -t 0 ]]; then
+    echo "Error: detected piped input but missing -p flag." >&2
+    echo "Usage: <command> | $0 -p" >&2
+    echo "Example: cat file.txt | $0 -p" >&2
+    exit 2
+  fi
   echo "Error: file is required." >&2
   print_usage
   exit 2
@@ -365,9 +420,9 @@ if [[ -n "$link" ]]; then
 
   # SAVE TO HISTORY
   timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-  filename="$(basename "$FILE")"
+  url_filename="$(basename "$link")"
   mkdir -p "$(dirname "$HISTORY_FILE")"
-  echo "$timestamp | $filename | $link" >> "$HISTORY_FILE"
+  echo "$timestamp | $url_filename | $link" >> "$HISTORY_FILE"
   tail -n 100 "$HISTORY_FILE" > "$HISTORY_FILE.tmp" && mv "$HISTORY_FILE.tmp" "$HISTORY_FILE"
 
   exit 0
