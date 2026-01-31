@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-UPLOAD_URL="https://user:pass@upload.freedoms4.org/index.php"
+UPLOAD_URL="https://user:pass@share.freedoms4.org"
 HISTORY_FILE="$HOME/.uploaded_files.txt"
 COPY_TO_CLIPBOARD=false
 USE_COLOR=true
